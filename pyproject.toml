@@ -1,0 +1,30 @@
+# solarman-mqtt packaging file
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta:__legacy__"
+
+[project]
+name="solarman_mqtt"
+version="2025.8"
+authors = [
+  { name="Austin Mroczek", email="austin@mroczek.org" },
+]
+description="Interact with Solarman"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache 2.0",
+    "Operating System :: OS Independent",
+]
+keywords=["solarman", "mqtt"]
+dependencies=[
+    "paho_mqtt==1.5.1",
+    "jsonschema==4.4.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/austinmroczek/addon-solarman-mqtt"
+"Bug Tracker" = "https://github.com/austinmroczek/addon-solarman-mqtt/issues"
+
