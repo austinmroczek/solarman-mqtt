@@ -9,3 +9,5 @@
 __pycache__
 config.json
 venv
+.tox
+*.egg-info/*
