@@ -101,9 +101,7 @@ class SolarmanPV:
             for i in meter_data:
                 if meter_data[i]:
                     mqtt_connection.message("/meter/" + i, meter_data[i])
-            mqtt_connection.message(
-                "/meter/attributes", json.dumps(meter_data_list)
-            )
+            mqtt_connection.message("/meter/attributes", json.dumps(meter_data_list))
 
         if inverter_device_state == 1:
             logging.info(
