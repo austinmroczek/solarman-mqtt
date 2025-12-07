@@ -8,8 +8,11 @@ import sys
 import time
 from hashlib import sha256
 
+from jsonschema import validate
+from jsonschema.exceptions import SchemaError, ValidationError
+
 from .api import ConstructData, SolarmanApi
-from .helpers import ConfigCheck
+from .const import SCHEMA
 from .mqtt import Mqtt
 
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +50,15 @@ class SolarmanPV:
             print(
                 f"## CONFIG INSTANCE NAME: {conf['name']} [{config.index(conf) + 1}/{len(config)}]"
             )
-            ConfigCheck(conf)
+            try:
+                validate(instance=self.config, schema=SCHEMA)
+            except ValidationError as err:
+                logging.critial(err.message)
+                sys.exit(1)
+            except SchemaError as err:
+                logging.critial(err.message)
+                sys.exit(1)
+
 
     def single_run(self, config):
         """

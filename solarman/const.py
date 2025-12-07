@@ -1,13 +1,6 @@
-"""
-Validate the JSON schema and contents used for the config file.
-"""
+"""Constants"""
 
-import sys
-
-from jsonschema import validate
-from jsonschema.exceptions import SchemaError, ValidationError
-
-_SCHEMA = {
+SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "solarman-mqtt-schema",
     "type": "object",
@@ -50,40 +43,3 @@ _SCHEMA = {
         },
     },
 }
-
-_VALID = """
-The provided config file is valid. This check validates if:
-
-  * The config file is a valid JSON file
-  * The config file contains the required keys
-  * The config file contains the correct types for the provided keys
-
-Although that is not a guarantee that the contents are valid. If
-you still have issues, please check all values and try again.
-
-If you need any further help, please see:
-<https://github.com/mpepping/solarman-mqtt>
-
-"""
-
-
-class ConfigCheck:  # pylint: disable=too-few-public-methods
-    """
-    Validate the config file
-    """
-
-    def __init__(self, config):
-        """
-        Main
-        :return:
-        """
-        self.config = config
-        try:
-            validate(instance=self.config, schema=_SCHEMA)
-        except ValidationError as err:
-            print(err.message)
-            sys.exit(1)
-        except SchemaError as err:
-            print(err.message)
-            sys.exit(1)
-        print(_VALID)
