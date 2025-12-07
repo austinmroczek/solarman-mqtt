@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta:__legacy__"
 
 [project]
 name="solarman_mqtt"
-version="2025.8"
+version="2025.12"
 authors = [
   { name="Austin Mroczek", email="austin@mroczek.org" },
 ]
@@ -20,7 +20,7 @@ classifiers = [
 ]
 keywords=["solarman", "mqtt"]
 dependencies=[
-    "paho_mqtt==1.5.1",
+    "paho_mqtt==2.1.0",
     "jsonschema==4.4.0",
 ]
 

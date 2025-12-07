@@ -6,6 +6,7 @@ import logging
 import random
 
 from paho.mqtt import client as mqtt_client
+from paho.mqtt.enums import CallbackAPIVersion
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,7 +35,7 @@ class Mqtt:
         :return:
         """
         client_id = f"solarmanpv-mqtt-{random.randint(0, 1000)}"
-        client = mqtt_client.Client(client_id)
+        client = mqtt_client.Client(client_id=client_id, callback_api_version=CallbackAPIVersion.VERSION1)
         client.username_pw_set(self.username, self.password)
         client.connect(self.broker, self.port)
         return client
