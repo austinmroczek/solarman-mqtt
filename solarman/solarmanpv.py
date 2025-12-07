@@ -69,8 +69,11 @@ class SolarmanPV:
 
         station_data = pvdata.station_realtime
         inverter_data = pvdata.device_current_data_inverter
+        logging.debug(f"inverter_data: {inverter_data}")
         logger_data = pvdata.device_current_data_logger
+        logging.debug(f"logger_data: {logger_data}")
         meter_data = pvdata.device_current_data_meter
+        logging.debug(f"meter_data: {meter_data}")
 
         inverter_data_list = ConstructData(inverter_data).device_current_data
         logger_data_list = ConstructData(logger_data).device_current_data
