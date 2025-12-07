@@ -28,3 +28,42 @@ dependencies=[
 "Homepage" = "https://github.com/austinmroczek/solarman-mqtt"
 "Bug Tracker" = "https://github.com/austinmroczek/solarman-mqtt/issues"
 
+[tool.tox.env.lint]
+deps = ["ruff>=0.9.7", "coverage>=7.6.12",]
+ignore_errors = true
+commands = [
+    ["ruff", "check", "--fix","solarman", "tests"],
+    ["coverage", "report", "-m"]
+]
+[tool.tox.env.type]
+description = "run type check on code base"
+deps = ["mypy>=1.15.0", "types-requests>=2.23.0", "types-oauthlib>=3.2.0", "types-requests-oauthlib>=2.0.0"]
+commands = [
+    ["mypy", "-p", "tests"],
+]
+
+[tool.tox]
+requires = ["tox>=4.24.1"]
+env_list = ["type", "lint", "3.10", "3.11", "3.12", "3.13", ]
+
+[tool.tox.env_run_base]
+description = "Run test under {base_python}"
+deps = [
+    "-r{toxinidir}/requirements.txt",
+    "pytest>=8.3.4",
+    "pytest-sugar>=1.0.0",
+
+]
+commands = [["pytest"]]
+
+[tool.ruff]
+
+[tool.ruff.lint]
+
+[tool.coverage]
+
+[tool.mypy]
+
+[[tool.mypy.overrides]]
+module = ["pytest", "requests_mock"]
+ignore_missing_imports = true
