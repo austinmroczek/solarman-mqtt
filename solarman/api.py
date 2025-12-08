@@ -101,21 +101,14 @@ class ConstructData:  # pylint: disable=too-few-public-methods
 
     def __init__(self, data):
         self.data = data
-        self.device_current_data = self.construct_data()
-
-    def construct_data(self):
-        """
-        Return restructured and separated device current data
-        """
-        new_data_list = {}
+        self.device_current_data = {}
         try:
             for i in self.data["dataList"]:
                 del i["key"]
                 name = i["name"]
                 name = name.replace(" ", "_")
                 del i["name"]
-                new_data_list[name] = i["value"]
+                self.device_current_data[name] = i["value"]
             del self.data["dataList"]
         except KeyError:
             pass
-        return new_data_list
