@@ -55,9 +55,3 @@ class Mqtt:
             logging.debug("Send %s to %s", msg, topic)
         else:
             logging.error("Failed to send message to topic %s", topic)
-
-    def message(self, topic, msg):
-        """
-        MQTT Send message to selected topic
-        """
-        self.publish(topic, msg)

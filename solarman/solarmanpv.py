@@ -107,7 +107,7 @@ class SolarmanPV:
         if meter_data:
             meter_state = meter_data.get("deviceState", 128)
 
-        mqtt_connection = Mqtt(config["mqtt"])
+        mqtt = Mqtt(config["mqtt"])
 
         if meter_data and meter_state == 1:
             logging.info(
@@ -115,8 +115,8 @@ class SolarmanPV:
             )
             for i in meter_data:
                 if meter_data[i]:
-                    mqtt_connection.message("/meter/" + i, meter_data[i])
-            mqtt_connection.message("/meter/attributes", json.dumps(meter_data_list))
+                    mqtt.publish("/meter/" + i, meter_data[i])
+            mqtt.publish("/meter/attributes", json.dumps(meter_data_list))
 
         if inverter_device_state == 1:
             logging.info(
@@ -126,22 +126,22 @@ class SolarmanPV:
             )
             for i in station_data:
                 if station_data[i] and i not in discard:
-                    mqtt_connection.message("/station/" + i, station_data[i])
+                    mqtt.publish("/station/" + i, station_data[i])
 
             for i in inverter_data:
                 if inverter_data[i] and i not in discard:
-                    mqtt_connection.message("/inverter/" + i, inverter_data[i])
+                    mqtt.publish("/inverter/" + i, inverter_data[i])
 
-            mqtt_connection.message(
+            mqtt.publish(
                 "/inverter/attributes",
                 json.dumps(inverter_data_list),
             )
 
             for i in logger_data:
                 if logger_data[i] and i not in discard:
-                    mqtt_connection.message("/logger/" + i, logger_data[i])
+                    mqtt.publish("/logger/" + i, logger_data[i])
 
-            mqtt_connection.message(
+            mqtt.publish(
                 "/logger/attributes",
                 json.dumps(logger_data_list),
             )
@@ -154,10 +154,10 @@ class SolarmanPV:
                 inverter_device_state,
             )
         else:
-            mqtt_connection.message(
+            mqtt.publish(
                 "/inverter/deviceState", inverter_data.get("deviceState")
             )
-            mqtt_connection.message(
+            mqtt.publish(
                 "/logger/deviceState", logger_data.get("deviceState")
             )
             logging.info(
