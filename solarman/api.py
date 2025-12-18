@@ -86,7 +86,7 @@ class SolarmanApi:
             "Content-Type": "application/json",
             "Authorization": "bearer " + self.token,
         }
-        conn.request("POST", "/device/v1.0/currentData?language=en", payload, headers)
+        conn.request("POST", "/device/v1.0/currentData", payload, headers)
         res = conn.getresponse()
         data = json.loads(res.read())
         return data
