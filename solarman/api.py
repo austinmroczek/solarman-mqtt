@@ -77,6 +77,7 @@ class SolarmanApi:
                 data = json.dumps({"page": 99})
             )
             data = json.loads(response.content)
+            self.check_response(data)
             logging.info(f"station list: {data}")
             logging.info(f"Found stationList with {len(data['stationList'])} entries")
             if not data["stationList"]:
@@ -148,6 +149,7 @@ class SolarmanApi:
                 data = json.dumps({"stationId": self.station_id})
             )
             data = json.loads(response.content)
+            self.check_response(data)
             return data
 
         except requests.exceptions.RequestException as error:
@@ -159,7 +161,7 @@ class SolarmanApi:
         :return: current data
         """
         if device_id == 0:
-            data = {"deviceId": device_id}
+            data = {"deviceSn": device_sn}
         else:
             data = {"deviceSn":device_sn,"deviceId": device_id}
 
@@ -174,11 +176,34 @@ class SolarmanApi:
                 data = json.dumps(data)
             )
             data = json.loads(response.content)
+            self.check_response(data)
             logging.info(f"current_data:\n{data}")
             return data
 
         except requests.exceptions.RequestException as error:
             logging.error(error)
+
+    def check_response(self, response: dict) -> None:
+        """Check the response for various error codes."""
+        if not response:
+            logging.warning("Server returned empty response")
+            return
+
+        if response.get("success", False):
+            # no problems here
+            return
+
+        code = int(response.get("code", 0))
+
+        if code==2101009:
+            # 'msg': 'appId or api is locked'
+            logging.critical("AppId or API is locked")
+            # TODO: some sort of timer to retry?
+            return
+
+        # this is a problem we have not seen before
+        logging.warning(f"Request did not succeed. Code: {code}. Message: {response.get('msg', 'none')}")
+        
 
 
 class ConstructData:  # pylint: disable=too-few-public-methods
