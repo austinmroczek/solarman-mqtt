@@ -68,7 +68,6 @@ class SolarmanPV:
         pvdata = SolarmanApi(config)
 
         station_data = pvdata.station_realtime
-        logging.info(f"station_data: {station_data}")
         inverter_data = pvdata.device_current_data_inverter
         logging.info(f"inverter_data: {inverter_data}")
         logger_data = pvdata.device_current_data_logger
@@ -118,15 +117,21 @@ class SolarmanPV:
                     mqtt.publish("/meter/" + i, meter_data[i])
             mqtt.publish("/meter/attributes", json.dumps(meter_data_list))
 
+        if station_data:
+            if not station_data.get("success", False):
+                logging.info(f"station_data: {station_data}")
+            else:
+                for i in station_data:
+                    if station_data[i] and i not in discard:
+                        mqtt.publish("/station/" + i, station_data[i])
+
+
         if inverter_device_state == 1:
             logging.info(
                 "%s - Inverter DeviceState: %s -> Publishing to MQTT ...",
                 _t,
                 inverter_device_state,
             )
-            for i in station_data:
-                if station_data[i] and i not in discard:
-                    mqtt.publish("/station/" + i, station_data[i])
 
             for i in inverter_data:
                 if inverter_data[i] and i not in discard:
