@@ -25,6 +25,7 @@ class SolarmanApi:
             self.config["username"],
             self.config["passhash"],
         )
+        self.station_device_list = self.get_station_device_list()
         self.station_realtime = self.get_station_realtime()
         self.device_current_data_inverter = self.get_device_current_data(
             self.config["inverterId"]
@@ -60,6 +61,31 @@ class SolarmanApi:
         except Exception as error:  # pylint: disable=broad-except
             logging.error("Unable to fetch token: %s", str(error))
             sys.exit(1)
+
+    def get_station_device_list(self):
+        """
+        Return station realtime data
+        :return: realtime data
+        """
+        try:
+            response = requests.post(
+                url = self.url_base + "/station/v1.0/device",
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "bearer " + self.token,
+                },
+                data = json.dumps({"stationId": self.station_id})
+            )
+            print(f'Response HTTP Status Code: {response.status_code}')
+            print(f'Response HTTP Response Body: {response.content}')            
+            data = json.loads(response.content)
+            logging.info(f"station_device_list data: {data}")
+            print(f"data:\n{data}")
+            return data
+
+        except requests.exceptions.RequestException as error:
+            print(error)
+
 
     def get_station_realtime(self):
         """
