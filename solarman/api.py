@@ -3,6 +3,7 @@ Api
 """
 
 import http.client
+import requests
 import json
 import logging
 import sys
@@ -76,6 +77,31 @@ class SolarmanApi:
         return data
 
     def get_device_current_data(self, device_sn):
+        """
+        Return device current data
+        :return: current data
+        """
+        try:
+            response = requests.post(
+                url = self.url + "/device/v1.0/currentData",
+                params = {"language": "en"},
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "bearer " + self.token,
+                },
+                data = json.dumps({"deviceSn": device_sn})
+            )
+            print(f'Response HTTP Status Code: {response.status_code}')
+            print(f'Response HTTP Response Body: {response.content}')            
+            data = json.loads(response.content)
+            print(f"data:\n{data}")
+
+        except requests.exceptions.RequestException as error:
+            print(error)
+
+        return data
+
+    def get_device_current_data_old(self, device_sn):
         """
         Return device current data
         :return: current data
