@@ -15,8 +15,8 @@ class SolarmanApi:
     """
 
     def __init__(self, config):
+        logging.info("Starting SolarmanAPI")
         self.config = config
-        self.station_id = config["stationId"]
         self.url = config["url"]
         self.url_base = "https://" + self.url
         self.token = self.get_token(
@@ -29,8 +29,12 @@ class SolarmanApi:
         self.logger_id: int = 0
 
         station_id = self.get_station()
-        logging.info(f"Configured station: {self.station_id}\tAPI retrieved station: {station_id}")
-        # TODO: use retrieved ID if it works
+        if station_id == 0:
+            logging.error("Unable to find useful stationList.  Using configured stationId")
+            self.station_id = int(config["stationId"])
+        else:
+            logging.info(f"Configured station: {self.station_id}\tAPI retrieved station: {station_id}")
+            self.station_id = station_id
 
         self.station_device_list = self.get_station_device_list()
 
@@ -62,6 +66,7 @@ class SolarmanApi:
         Return station realtime data
         :return: realtime data
         """
+        logging.info(f"Requesting station list")
         try:
             response = requests.post(
                 url = self.url_base + "/station/v1.0/list",
@@ -73,13 +78,10 @@ class SolarmanApi:
             )
             data = json.loads(response.content)
             logging.info(f"station list: {data}")
+            logging.info(f"Found stationList with {len(data['stationList'])} entries")
             if not data["stationList"]:
-                logging.error("Unable to find stationList")
-            
-            station_list = data["stationList"]
-
-            if len(station_list)>1:
-                logging.warning("Found more than one station.  Using first.")
+                return 0
+                        
             return data["stationList"][0]["id"]
 
         except requests.exceptions.RequestException as error:
@@ -88,6 +90,8 @@ class SolarmanApi:
 
     def get_station_device_list(self):
         """Find the inverter and logger IDs."""
+        logging.info(f"Requesting device list")
+
         try:
             response = requests.post(
                 url = self.url_base + "/station/v1.0/device",
