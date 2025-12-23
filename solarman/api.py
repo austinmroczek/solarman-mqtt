@@ -30,10 +30,10 @@ class SolarmanApi:
 
         station_id = self.get_station()
         if station_id == 0:
-            logging.error("Unable to find useful stationList.  Using configured stationId")
             self.station_id = int(config["stationId"])
+            logging.error(f"Unable to find useful stationList.  Using configured stationId {self.station_id}")
         else:
-            logging.info(f"Configured station: {self.station_id}\tAPI retrieved station: {station_id}")
+            logging.info(f"Using retrieved stationId {station_id}")
             self.station_id = station_id
 
         self.station_device_list = self.get_station_device_list()
@@ -69,7 +69,7 @@ class SolarmanApi:
         logging.info(f"Requesting station list")
         try:
             response = requests.post(
-                url = self.url_base + "/station/v1.0/list",
+                url = "https://api.solarmanpv.com/station/v1.0/list",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -94,7 +94,7 @@ class SolarmanApi:
 
         try:
             response = requests.post(
-                url = self.url_base + "/station/v1.0/device",
+                url = "https://api.solarmanpv.com/station/v1.0/device",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -105,10 +105,14 @@ class SolarmanApi:
             logging.info(f"station_device_list data: {data}")
 
             device_list = data["deviceListItems"]
+            logging.info(f"Found deviceListItems with {len(device_list)} items")
+
             for device in device_list:
                 if device["deviceType"]=="INVERTER":
+                    logging.info(f"Found inverter with ID {device['deviceId']}")
                     self.inverter_id = int(device["deviceId"])
                 if device["deviceType"]=="COLLECTOR":
+                    logging.info(f"Found logger with ID {device['deviceId']}")
                     self.logger_id = int(device["deviceId"])
                 
 
@@ -136,17 +140,14 @@ class SolarmanApi:
         """
         try:
             response = requests.post(
-                url = self.url_base + "/station/v1.0/realTime?language=en",
+                url = "https://api.solarmanpv.com/station/v1.0/realTime",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
                 },
                 data = json.dumps({"stationId": self.station_id})
             )
-            print(f'Response HTTP Status Code: {response.status_code}')
-            print(f'Response HTTP Response Body: {response.content}')            
             data = json.loads(response.content)
-            print(f"data:\n{data}")
             return data
 
         except requests.exceptions.RequestException as error:
@@ -165,7 +166,7 @@ class SolarmanApi:
 
         try:
             response = requests.post(
-                url = self.url_base + "/device/v1.0/currentData?language=en",
+                url = "https://api.solarmanpv.com/device/v1.0/currentData?language=en",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
