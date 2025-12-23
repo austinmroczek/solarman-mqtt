@@ -116,9 +116,11 @@ class SolarmanApi:
         self.station_realtime = self.get_station_realtime()
 
         self.device_current_data_inverter = self.get_device_current_data(
+            self.config["inverterId"],
             self.inverter_id
         )
         self.device_current_data_logger = self.get_device_current_data(
+            self.config["loggerId"],
             self.logger_id
         )
         
@@ -146,11 +148,17 @@ class SolarmanApi:
         except requests.exceptions.RequestException as error:
             logging.error(error)
 
-    def get_device_current_data(self, device_id: int):
+    def get_device_current_data(self, device_sn: str, device_id: int):
         """
         Return device current data
         :return: current data
         """
+        if device_id == 0:
+            data = {"deviceId": device_id}
+        else:
+            data = {"deviceSn":device_sn,"deviceId": device_id}
+
+
         try:
             response = requests.post(
                 url = self.url_base + "/device/v1.0/currentData?language=en",
@@ -158,12 +166,10 @@ class SolarmanApi:
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
                 },
-                data = json.dumps({"deviceId": device_id})
+                data = json.dumps(data)
             )
-            print(f'Response HTTP Status Code: {response.status_code}')
-            print(f'Response HTTP Response Body: {response.content}')            
             data = json.loads(response.content)
-            print(f"data:\n{data}")
+            logging.info(f"current_data:\n{data}")
             return data
 
         except requests.exceptions.RequestException as error:
