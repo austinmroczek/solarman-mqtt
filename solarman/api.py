@@ -18,6 +18,7 @@ class SolarmanApi:
         self.config = config
         self.station_id = config["stationId"]
         self.url = config["url"]
+        self.url_base = "https://" + self.url
         self.token = self.get_token(
             self.config["appid"],
             self.config["secret"],
@@ -83,7 +84,7 @@ class SolarmanApi:
         """
         try:
             response = requests.post(
-                url = self.url + "/device/v1.0/currentData",
+                url = self.url_base + "/device/v1.0/currentData",
                 params = {"language": "en"},
                 headers = {
                     "Content-Type": "application/json",
@@ -95,11 +96,11 @@ class SolarmanApi:
             print(f'Response HTTP Response Body: {response.content}')            
             data = json.loads(response.content)
             print(f"data:\n{data}")
+            return data
 
         except requests.exceptions.RequestException as error:
             print(error)
 
-        return data
 
     def get_device_current_data_old(self, device_sn):
         """
