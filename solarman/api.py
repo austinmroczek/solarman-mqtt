@@ -25,21 +25,16 @@ class SolarmanApi:
             self.config["username"],
             self.config["passhash"],
         )
-        self.station_device_list = self.get_station_device_list()
-        self.station_realtime = self.get_station_realtime()
-        self.device_current_data_inverter = self.get_device_current_data(
-            self.config["inverterId"]
-        )
-        self.device_current_data_logger = self.get_device_current_data(
-            self.config["loggerId"]
-        )
+        self.inverter_id: int = 0
+        self.logger_id: int = 0
 
-        try:
-            self.device_current_data_meter = self.get_device_current_data(
-                self.config["meterId"]
-            )
-        except KeyError:
-            self.device_current_data_meter = None
+        station_id = self.get_station()
+        logging.info(f"Configured station: {self.station_id}\tAPI retrieved station: {station_id}")
+        # TODO: use retrieved ID if it works
+
+        self.station_device_list = self.get_station_device_list()
+
+        self.get_data()
 
     def get_token(self, appid, secret, username, passhash):
         """
@@ -62,11 +57,36 @@ class SolarmanApi:
             logging.error("Unable to fetch token: %s", str(error))
             sys.exit(1)
 
-    def get_station_device_list(self):
+    def get_station(self):
         """
         Return station realtime data
         :return: realtime data
         """
+        try:
+            response = requests.post(
+                url = self.url_base + "/station/v1.0/list",
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "bearer " + self.token,
+                },
+                data = json.dumps({"page": 99})
+            )
+            data = json.loads(response.content)
+            if not data["stationList"]:
+                logging.error("Unable to find stationList")
+            
+            station_list = data["stationList"]
+
+            if len(station_list)>1:
+                logging.warning("Found more than one station.  Using first.")
+            return data["stationList"]["id"]
+
+        except requests.exceptions.RequestException as error:
+            logging.error(error)
+
+
+    def get_station_device_list(self):
+        """Find the inverter and logger IDs."""
         try:
             response = requests.post(
                 url = self.url_base + "/station/v1.0/device",
@@ -76,16 +96,31 @@ class SolarmanApi:
                 },
                 data = json.dumps({"stationId": self.station_id})
             )
-            print(f'Response HTTP Status Code: {response.status_code}')
-            print(f'Response HTTP Response Body: {response.content}')            
             data = json.loads(response.content)
             logging.info(f"station_device_list data: {data}")
-            print(f"data:\n{data}")
-            return data
+
+            device_list = data["deviceListItems"]
+            for device in device_list:
+                if device["deviceType"]=="INVERTER":
+                    self.inverter_id = int(device["deviceId"])
+                if device["deviceType"]=="COLLECTOR":
+                    self.logger_id = int(device["deviceId"])
+                
 
         except requests.exceptions.RequestException as error:
-            print(error)
+            logging.error(error)
 
+    def get_data(self):
+        """Get recurring data."""
+        self.station_realtime = self.get_station_realtime()
+
+        self.device_current_data_inverter = self.get_device_current_data(
+            self.inverter_id
+        )
+        self.device_current_data_logger = self.get_device_current_data(
+            self.logger_id
+        )
+        
 
     def get_station_realtime(self):
         """
@@ -108,9 +143,9 @@ class SolarmanApi:
             return data
 
         except requests.exceptions.RequestException as error:
-            print(error)
+            logging.error(error)
 
-    def get_device_current_data(self, device_sn):
+    def get_device_current_data(self, device_id: int):
         """
         Return device current data
         :return: current data
@@ -122,7 +157,7 @@ class SolarmanApi:
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
                 },
-                data = json.dumps({"deviceSn": device_sn})
+                data = json.dumps({"deviceId": device_id})
             )
             print(f'Response HTTP Status Code: {response.status_code}')
             print(f'Response HTTP Response Body: {response.content}')            
@@ -131,7 +166,7 @@ class SolarmanApi:
             return data
 
         except requests.exceptions.RequestException as error:
-            print(error)
+            logging.error(error)
 
 
 class ConstructData:  # pylint: disable=too-few-public-methods

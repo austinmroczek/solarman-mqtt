@@ -72,13 +72,9 @@ class SolarmanPV:
         logging.info(f"inverter_data: {inverter_data}")
         logger_data = pvdata.device_current_data_logger
         logging.info(f"logger_data: {logger_data}")
-        meter_data = pvdata.device_current_data_meter
-        logging.info(f"meter_data: {meter_data}")
 
         inverter_data_list = ConstructData(inverter_data).device_current_data
         logger_data_list = ConstructData(logger_data).device_current_data
-        if meter_data:
-            meter_data_list = ConstructData(meter_data).device_current_data
 
         if config.get("debug", False):
             logging.info(json.dumps("STATION DATA"))
@@ -91,87 +87,38 @@ class SolarmanPV:
             logging.info(json.dumps(logger_data, indent=4, sort_keys=True))
             logging.info(json.dumps("LOGGER DATA LIST"))
             logging.info(json.dumps(logger_data_list, indent=4, sort_keys=True))
-            if meter_data:
-                logging.info(json.dumps("METER DATA"))
-                logging.info(json.dumps(meter_data, indent=4, sort_keys=True))
-                logging.info(json.dumps("METER DATA LIST"))
-                logging.info(json.dumps(meter_data_list, indent=4, sort_keys=True))
-
-        discard = ["code", "msg", "requestId", "success"]
 
         _t = time.strftime("%Y-%m-%d %H:%M:%S")
-        inverter_device_state = inverter_data.get("deviceState", 128)
-
-        meter_state = None
-        if meter_data:
-            meter_state = meter_data.get("deviceState", 128)
 
         mqtt = Mqtt(config["mqtt"])
 
-        if meter_data and meter_state == 1:
-            logging.info(
-                "%s - Meter DeviceState: %s -> Publishing to MQTT ...", _t, meter_state
-            )
-            for i in meter_data:
-                if meter_data[i]:
-                    mqtt.publish("/meter/" + i, meter_data[i])
-            mqtt.publish("/meter/attributes", json.dumps(meter_data_list))
-
         if station_data:
             if not station_data.get("success", False):
-                logging.info(f"station_data request failed.  Response: {station_data}")
+                logging.warning(f"{_t} station_data request failed.  Response: {station_data}")
             else:
-                logging.info(f"station_data updated")
+                logging.info(f"{_t} station_data updated")
                 for i in station_data:
-                    if station_data[i] and i not in discard:
-                        mqtt.publish("/station/" + i, station_data[i])
+                    mqtt.publish("/station/" + i, station_data[i])
 
 
-        if inverter_device_state == 1:
-            logging.info(
-                "%s - Inverter DeviceState: %s -> Publishing to MQTT ...",
-                _t,
-                inverter_device_state,
-            )
-
-            for i in inverter_data:
-                if inverter_data[i] and i not in discard:
+        if inverter_data:
+            if not inverter_data.get("success", False):
+                logging.warning(f"inverter_data request failed.  Response: {inverter_data}")
+            else:
+                logging.info(f"{_t} inverter_data updated")
+                for i in inverter_data:
                     mqtt.publish("/inverter/" + i, inverter_data[i])
+                mqtt.publish("/inverter/attributes",json.dumps(inverter_data_list))
 
-            mqtt.publish(
-                "/inverter/attributes",
-                json.dumps(inverter_data_list),
-            )
-
-            for i in logger_data:
-                if logger_data[i] and i not in discard:
+        if logger_data:
+            if not logger_data.get("success", False):
+                logging.warning(f"logger_data request failed.  Response: {logger_data}")
+            else:
+                logging.info(f"{_t} logger_data updated")
+                for i in logger_data:
                     mqtt.publish("/logger/" + i, logger_data[i])
+                mqtt.publish("/logger/attributes",json.dumps(logger_data_list))
 
-            mqtt.publish(
-                "/logger/attributes",
-                json.dumps(logger_data_list),
-            )
-
-        elif inverter_device_state == 128:
-            logging.info(
-                "%s - Inverter DeviceState: %s"
-                "-> No valid inverter status data available",
-                _t,
-                inverter_device_state,
-            )
-        else:
-            mqtt.publish(
-                "/inverter/deviceState", inverter_data.get("deviceState")
-            )
-            mqtt.publish(
-                "/logger/deviceState", logger_data.get("deviceState")
-            )
-            logging.info(
-                "%s - Inverter DeviceState: %s"
-                "-> Only status MQTT publish (probably offline due to nighttime shutdown)",
-                _t,
-                inverter_device_state,
-            )
 
     def single_run_loop(self):
         """
