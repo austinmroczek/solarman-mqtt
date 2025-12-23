@@ -72,6 +72,7 @@ class SolarmanApi:
                 data = json.dumps({"page": 99})
             )
             data = json.loads(response.content)
+            logging.info(f"station list: {data}")
             if not data["stationList"]:
                 logging.error("Unable to find stationList")
             
@@ -79,7 +80,7 @@ class SolarmanApi:
 
             if len(station_list)>1:
                 logging.warning("Found more than one station.  Using first.")
-            return data["stationList"]["id"]
+            return data["stationList"][0]["id"]
 
         except requests.exceptions.RequestException as error:
             logging.error(error)
