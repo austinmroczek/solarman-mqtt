@@ -119,8 +119,9 @@ class SolarmanPV:
 
         if station_data:
             if not station_data.get("success", False):
-                logging.info(f"station_data: {station_data}")
+                logging.info(f"station_data request failed.  Response: {station_data}")
             else:
+                logging.info(f"station_data updated")
                 for i in station_data:
                     if station_data[i] and i not in discard:
                         mqtt.publish("/station/" + i, station_data[i])

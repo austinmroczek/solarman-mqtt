@@ -66,16 +66,23 @@ class SolarmanApi:
         Return station realtime data
         :return: realtime data
         """
-        conn = http.client.HTTPSConnection(self.url, timeout=60)
-        payload = json.dumps({"stationId": self.station_id})
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "bearer " + self.token,
-        }
-        conn.request("POST", "/station/v1.0/realTime?language=en", payload, headers)
-        res = conn.getresponse()
-        data = json.loads(res.read())
-        return data
+        try:
+            response = requests.post(
+                url = self.url_base + "/station/v1.0/realTime?language=en",
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": "bearer " + self.token,
+                },
+                data = json.dumps({"stationId": self.station_id})
+            )
+            print(f'Response HTTP Status Code: {response.status_code}')
+            print(f'Response HTTP Response Body: {response.content}')            
+            data = json.loads(response.content)
+            print(f"data:\n{data}")
+            return data
+
+        except requests.exceptions.RequestException as error:
+            print(error)
 
     def get_device_current_data(self, device_sn):
         """
@@ -84,8 +91,7 @@ class SolarmanApi:
         """
         try:
             response = requests.post(
-                url = self.url_base + "/device/v1.0/currentData",
-                params = {"language": "en"},
+                url = self.url_base + "/device/v1.0/currentData?language=en",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -100,23 +106,6 @@ class SolarmanApi:
 
         except requests.exceptions.RequestException as error:
             print(error)
-
-
-    def get_device_current_data_old(self, device_sn):
-        """
-        Return device current data
-        :return: current data
-        """
-        conn = http.client.HTTPSConnection(self.url, timeout=60)
-        payload = json.dumps({"deviceSn": device_sn})
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": "bearer " + self.token,
-        }
-        conn.request("POST", "/device/v1.0/currentData", payload, headers)
-        res = conn.getresponse()
-        data = json.loads(res.read())
-        return data
 
 
 class ConstructData:  # pylint: disable=too-few-public-methods
