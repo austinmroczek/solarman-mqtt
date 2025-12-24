@@ -2,7 +2,6 @@
 Api
 """
 
-import http.client
 import requests
 import json
 import logging
@@ -48,7 +47,7 @@ class SolarmanApi:
         """
         try:
             response = requests.post(
-                url = self.url + f"/account/v1.0/token?appId={appid}&language=en"
+                url = self.url + f"/account/v1.0/token?appId={appid}&language=en",
                 headers = {"Content-Type": "application/json"},
                 data = json.dumps({"appSecret": secret, "email": username, "password": passhash})
             )
