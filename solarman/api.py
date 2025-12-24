@@ -18,7 +18,6 @@ class SolarmanApi:
         logging.info("Starting SolarmanAPI")
         self.config = config
         self.url = "https://globalapi.solarmanpv.com"
-        self.url_base = "https://" + self.url
         self.token = self.get_token(
             self.config["appid"],
             self.config["secret"],
@@ -27,6 +26,8 @@ class SolarmanApi:
         )
         self.inverter_id: int = 0
         self.logger_id: int = 0
+
+        logging.info(f"Starting API with URL: {self.url}")
 
         station_id = self.get_station()
         if station_id == 0:
@@ -69,7 +70,7 @@ class SolarmanApi:
         logging.info(f"Requesting station list")
         try:
             response = requests.post(
-                url = f"{self.url}/station/v1.0/list",
+                url = self.url + "/station/v1.0/list",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -95,7 +96,7 @@ class SolarmanApi:
 
         try:
             response = requests.post(
-                url = f"{self.url}/station/v1.0/device",
+                url = self.url + "/station/v1.0/device",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -141,7 +142,7 @@ class SolarmanApi:
         """
         try:
             response = requests.post(
-                url = f"{self.url}/station/v1.0/realTime",
+                url = self.url + "/station/v1.0/realTime",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -168,7 +169,7 @@ class SolarmanApi:
 
         try:
             response = requests.post(
-                url = f"{self.url}/device/v1.0/currentData?language=en",
+                url = self.url + "/device/v1.0/currentData?language=en",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
