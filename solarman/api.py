@@ -14,7 +14,6 @@ class SolarmanApi:
     """
 
     def __init__(self, config):
-        logging.info("Starting SolarmanAPI")
         self.config = config
         self.url = "https://globalapi.solarmanpv.com"
         self.token = self.get_token(
@@ -24,14 +23,16 @@ class SolarmanApi:
             self.config["passhash"],
         )
         self.inverter_id: int = 0
+        self.inverter_sn: str = ''
         self.logger_id: int = 0
+        self.logger_sn: str = ''
 
         logging.info(f"Starting API with URL: {self.url}")
 
         station_id = self.get_station()
         if station_id == 0:
             self.station_id = int(config["stationId"])
-            logging.error(f"Unable to find useful stationList.  Using configured stationId {self.station_id}")
+            logging.warning(f"Unable to find useful stationList.  Using configured stationId {self.station_id}")
         else:
             logging.info(f"Using retrieved stationId {station_id}")
             self.station_id = station_id
@@ -62,7 +63,7 @@ class SolarmanApi:
             logging.error("Unable to get access token")
             sys.exit(1)
 
-    def get_station(self):
+    def get_station(self)->int:
         """
         Return station realtime data
         :return: realtime data
@@ -70,12 +71,12 @@ class SolarmanApi:
         logging.info(f"Requesting station list")
         try:
             response = requests.post(
-                url = self.url + "/station/v1.0/list",
+                url = self.url + "/station/v1.0/list?language=en",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
                 },
-                data = json.dumps({"page": 99})
+                data = json.dumps({"page": 1, "size": 50})
             )
             data = json.loads(response.content)
             self.check_response(data)
@@ -84,11 +85,12 @@ class SolarmanApi:
             if not data["stationList"]:
                 return 0
                         
-            return data["stationList"][0]["id"]
+            return int(data["stationList"][0]["id"])
 
         except requests.exceptions.RequestException as error:
             logging.error(error)
 
+        return 0
 
     def get_station_device_list(self):
         """Find the inverter and logger IDs."""
@@ -104,19 +106,18 @@ class SolarmanApi:
                 data = json.dumps({"stationId": self.station_id})
             )
             data = json.loads(response.content)
-            logging.info(f"station_device_list data: {data}")
-
             device_list = data["deviceListItems"]
-            logging.info(f"Found deviceListItems with {len(device_list)} items")
+            logging.debug(f"Found deviceListItems with {len(device_list)} items")
 
             for device in device_list:
                 if device["deviceType"]=="INVERTER":
-                    logging.info(f"Found inverter with ID {device['deviceId']}")
+                    logging.info(f"Found inverter with SN {device['deviceSn']} and ID {device['deviceId']}")
                     self.inverter_id = int(device["deviceId"])
+                    self.inverter_sn = device['deviceSn']
                 if device["deviceType"]=="COLLECTOR":
-                    logging.info(f"Found logger with ID {device['deviceId']}")
+                    logging.info(f"Found logger with SN {device['deviceId']} and ID {device['deviceId']}")
                     self.logger_id = int(device["deviceId"])
-                
+                    self.logger_sn = device['deviceSn']                
 
         except requests.exceptions.RequestException as error:
             logging.error(error)
@@ -126,11 +127,11 @@ class SolarmanApi:
         self.station_realtime = self.get_station_realtime()
 
         self.device_current_data_inverter = self.get_device_current_data(
-            self.config["inverterId"],
+            self.inverter_sn,
             self.inverter_id
         )
         self.device_current_data_logger = self.get_device_current_data(
-            self.config["loggerId"],
+            self.logger_sn,
             self.logger_id
         )
         
@@ -142,7 +143,7 @@ class SolarmanApi:
         """
         try:
             response = requests.post(
-                url = self.url + "/station/v1.0/realTime",
+                url = self.url + "/station/v1.0/realTime?language=en",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -195,6 +196,8 @@ class SolarmanApi:
             return
 
         code = int(response.get("code", 0))
+
+        # Code: 2101006. Message: invalid param
 
         if code==2101009:
             # 'msg': 'appId or api is locked'
