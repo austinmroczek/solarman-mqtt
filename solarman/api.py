@@ -69,7 +69,7 @@ class SolarmanApi:
         logging.info(f"Requesting station list")
         try:
             response = requests.post(
-                url = "https://api.solarmanpv.com/station/v1.0/list",
+                url = f"{self.url}/station/v1.0/list",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -95,7 +95,7 @@ class SolarmanApi:
 
         try:
             response = requests.post(
-                url = "https://api.solarmanpv.com/station/v1.0/device",
+                url = f"{self.url}/station/v1.0/device",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -141,7 +141,7 @@ class SolarmanApi:
         """
         try:
             response = requests.post(
-                url = "https://api.solarmanpv.com/station/v1.0/realTime",
+                url = f"{self.url}/station/v1.0/realTime",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
@@ -168,7 +168,7 @@ class SolarmanApi:
 
         try:
             response = requests.post(
-                url = "https://api.solarmanpv.com/device/v1.0/currentData?language=en",
+                url = f"{self.url}/device/v1.0/currentData?language=en",
                 headers = {
                     "Content-Type": "application/json",
                     "Authorization": "bearer " + self.token,
