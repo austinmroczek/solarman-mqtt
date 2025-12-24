@@ -47,19 +47,20 @@ class SolarmanApi:
         :return: access_token
         """
         try:
-            conn = http.client.HTTPSConnection(self.url, timeout=60)
-            payload = json.dumps(
-                {"appSecret": secret, "email": username, "password": passhash}
+            response = requests.post(
+                url = self.url + f"/account/v1.0/token?appId={appid}&language=en"
+                headers = {"Content-Type": "application/json"},
+                data = json.dumps({"appSecret": secret, "email": username, "password": passhash})
             )
-            headers = {"Content-Type": "application/json"}
-            url = f"/account/v1.0/token?appId={appid}&language=en"
-            conn.request("POST", url, payload, headers)
-            res = conn.getresponse()
-            data = json.loads(res.read())
+
+            data = json.loads(response.content)
+            self.check_response(data)
             logging.debug("Received token")
             return data["access_token"]
-        except Exception as error:  # pylint: disable=broad-except
-            logging.error("Unable to fetch token: %s", str(error))
+
+        except requests.exceptions.RequestException as error:
+            logging.error(error)
+            logging.error("Unable to get access token")
             sys.exit(1)
 
     def get_station(self):
