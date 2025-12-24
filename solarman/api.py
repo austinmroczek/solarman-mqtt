@@ -17,7 +17,7 @@ class SolarmanApi:
     def __init__(self, config):
         logging.info("Starting SolarmanAPI")
         self.config = config
-        self.url = config["url"]
+        self.url = "https://globalapi.solarmanpv.com"
         self.url_base = "https://" + self.url
         self.token = self.get_token(
             self.config["appid"],
