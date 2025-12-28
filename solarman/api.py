@@ -6,6 +6,7 @@ import requests
 import json
 import logging
 import sys
+from typing import Optional
 
 
 class SolarmanApi:
@@ -41,27 +42,58 @@ class SolarmanApi:
 
         self.get_data()
 
+    def _make_request(self, url: str, headers: dict, data: dict, operation: str = "request") -> Optional[dict]:
+        """
+        Centralized request handler with comprehensive error handling.
+
+        :param url: The full URL to request
+        :param headers: Request headers
+        :param data: Request payload (will be JSON encoded)
+        :param operation: Description of the operation for logging
+        :return: Response data as dict, or None on error
+        """
+        try:
+            response = requests.post(
+                url=url,
+                headers=headers,
+                data=json.dumps(data),
+                timeout=30
+            )
+            response.raise_for_status()
+            return response.json()
+
+        except requests.exceptions.Timeout as error:
+            logging.error(f"Request timeout during {operation}: {error}")
+        except requests.exceptions.ConnectionError as error:
+            logging.error(f"Connection error during {operation}: {error}")
+        except requests.exceptions.HTTPError as error:
+            logging.error(f"HTTP error {error.response.status_code} during {operation}: {error}")
+        except json.JSONDecodeError as error:
+            logging.error(f"Invalid JSON response during {operation}: {error}")
+        except requests.exceptions.RequestException as error:
+            logging.error(f"Request failed during {operation}: {error}")
+
+        return None
+
     def get_token(self, appid, secret, username, passhash):
         """
         Get a token from the API
         :return: access_token
         """
-        try:
-            response = requests.post(
-                url = self.url + f"/account/v1.0/token?appId={appid}&language=en",
-                headers = {"Content-Type": "application/json"},
-                data = json.dumps({"appSecret": secret, "email": username, "password": passhash})
-            )
+        data = self._make_request(
+            url=self.url + f"/account/v1.0/token?appId={appid}&language=en",
+            headers={"Content-Type": "application/json"},
+            data={"appSecret": secret, "email": username, "password": passhash},
+            operation="getting access token"
+        )
 
-            data = json.loads(response.content)
-            self.check_response(data)
-            logging.debug("Received token")
-            return data["access_token"]
-
-        except requests.exceptions.RequestException as error:
-            logging.error(error)
+        if data is None:
             logging.error("Unable to get access token")
             sys.exit(1)
+
+        self.check_response(data)
+        logging.debug("Received token")
+        return data["access_token"]
 
     def get_station(self)->int:
         """
@@ -69,58 +101,58 @@ class SolarmanApi:
         :return: realtime data
         """
         logging.info(f"Requesting station list")
-        try:
-            response = requests.post(
-                url = self.url + "/station/v1.0/list?language=en",
-                headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": "bearer " + self.token,
-                },
-                data = json.dumps({"page": 1, "size": 50})
-            )
-            data = json.loads(response.content)
-            self.check_response(data)
-            logging.info(f"station list: {data}")
-            logging.info(f"Found stationList with {len(data['stationList'])} entries")
-            if not data["stationList"]:
-                return 0
-                        
-            return int(data["stationList"][0]["id"])
 
-        except requests.exceptions.RequestException as error:
-            logging.error(error)
+        data = self._make_request(
+            url=self.url + "/station/v1.0/list?language=en",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer " + self.token,
+            },
+            data={"page": 1, "size": 50},
+            operation="getting station list"
+        )
 
-        return 0
+        if data is None:
+            return 0
+
+        self.check_response(data)
+        logging.info(f"station list: {data}")
+        logging.info(f"Found stationList with {len(data['stationList'])} entries")
+
+        if not data["stationList"]:
+            return 0
+
+        return int(data["stationList"][0]["id"])
 
     def get_station_device_list(self):
         """Find the inverter and logger IDs."""
         logging.info(f"Requesting device list")
 
-        try:
-            response = requests.post(
-                url = self.url + "/station/v1.0/device",
-                headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": "bearer " + self.token,
-                },
-                data = json.dumps({"stationId": self.station_id})
-            )
-            data = json.loads(response.content)
-            device_list = data["deviceListItems"]
-            logging.debug(f"Found deviceListItems with {len(device_list)} items")
+        data = self._make_request(
+            url=self.url + "/station/v1.0/device",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer " + self.token,
+            },
+            data={"stationId": self.station_id},
+            operation="getting device list"
+        )
 
-            for device in device_list:
-                if device["deviceType"]=="INVERTER":
-                    logging.info(f"Found inverter with SN {device['deviceSn']} and ID {device['deviceId']}")
-                    self.inverter_id = int(device["deviceId"])
-                    self.inverter_sn = device['deviceSn']
-                if device["deviceType"]=="COLLECTOR":
-                    logging.info(f"Found logger with SN {device['deviceId']} and ID {device['deviceId']}")
-                    self.logger_id = int(device["deviceId"])
-                    self.logger_sn = device['deviceSn']                
+        if data is None:
+            return
 
-        except requests.exceptions.RequestException as error:
-            logging.error(error)
+        device_list = data["deviceListItems"]
+        logging.debug(f"Found deviceListItems with {len(device_list)} items")
+
+        for device in device_list:
+            if device["deviceType"]=="INVERTER":
+                logging.info(f"Found inverter with SN {device['deviceSn']} and ID {device['deviceId']}")
+                self.inverter_id = int(device["deviceId"])
+                self.inverter_sn = device['deviceSn']
+            if device["deviceType"]=="COLLECTOR":
+                logging.info(f"Found logger with SN {device['deviceId']} and ID {device['deviceId']}")
+                self.logger_id = int(device["deviceId"])
+                self.logger_sn = device['deviceSn']
 
     def get_data(self):
         """Get recurring data."""
@@ -141,49 +173,49 @@ class SolarmanApi:
         Return station realtime data
         :return: realtime data
         """
-        try:
-            response = requests.post(
-                url = self.url + "/station/v1.0/realTime?language=en",
-                headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": "bearer " + self.token,
-                },
-                data = json.dumps({"stationId": self.station_id})
-            )
-            data = json.loads(response.content)
-            self.check_response(data)
-            return data
+        data = self._make_request(
+            url=self.url + "/station/v1.0/realTime?language=en",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer " + self.token,
+            },
+            data={"stationId": self.station_id},
+            operation="getting station realtime data"
+        )
 
-        except requests.exceptions.RequestException as error:
-            logging.error(error)
+        if data is None:
+            return None
+
+        self.check_response(data)
+        return data
 
     def get_device_current_data(self, device_sn: str, device_id: int):
         """
         Return device current data
         :return: current data
         """
+        payload: dict[str, str | int]
         if device_id == 0:
-            data = {"deviceSn": device_sn}
+            payload = {"deviceSn": device_sn}
         else:
-            data = {"deviceSn":device_sn,"deviceId": device_id}
+            payload = {"deviceSn":device_sn,"deviceId": device_id}
 
+        data = self._make_request(
+            url=self.url + "/device/v1.0/currentData?language=en",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "bearer " + self.token,
+            },
+            data=payload,
+            operation="getting device current data"
+        )
 
-        try:
-            response = requests.post(
-                url = self.url + "/device/v1.0/currentData?language=en",
-                headers = {
-                    "Content-Type": "application/json",
-                    "Authorization": "bearer " + self.token,
-                },
-                data = json.dumps(data)
-            )
-            data = json.loads(response.content)
-            self.check_response(data)
-            logging.info(f"current_data:\n{data}")
-            return data
+        if data is None:
+            return None
 
-        except requests.exceptions.RequestException as error:
-            logging.error(error)
+        self.check_response(data)
+        logging.info(f"current_data:\n{data}")
+        return data
 
     def check_response(self, response: dict) -> None:
         """Check the response for various error codes."""
