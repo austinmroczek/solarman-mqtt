@@ -6,6 +6,7 @@ import requests
 import json
 import logging
 import sys
+import time
 from typing import Optional
 
 
@@ -42,36 +43,74 @@ class SolarmanApi:
 
         self.get_data()
 
-    def _make_request(self, url: str, headers: dict, data: dict, operation: str = "request") -> Optional[dict]:
+    def _make_request(
+        self,
+        url: str,
+        headers: dict,
+        data: dict,
+        operation: str = "request",
+        max_retries: int = 5,
+        retry_delay: float = 10.0
+    ) -> Optional[dict]:
         """
-        Centralized request handler with comprehensive error handling.
+        Centralized request handler with comprehensive error handling and automatic retries.
 
         :param url: The full URL to request
         :param headers: Request headers
         :param data: Request payload (will be JSON encoded)
         :param operation: Description of the operation for logging
+        :param max_retries: Maximum number of retry attempts (default: 3)
+        :param retry_delay: Initial delay between retries in seconds (default: 1.0)
         :return: Response data as dict, or None on error
         """
-        try:
-            response = requests.post(
-                url=url,
-                headers=headers,
-                data=json.dumps(data),
-                timeout=30
-            )
-            response.raise_for_status()
-            return response.json()
+        for attempt in range(max_retries + 1):
+            try:
+                if attempt > 0:
+                    # Exponential backoff: delay increases with each retry
+                    delay = retry_delay * (2 ** (attempt - 1))
+                    logging.info(f"Retrying {operation} (attempt {attempt + 1}/{max_retries + 1}) after {delay:.1f}s delay")
+                    time.sleep(delay)
 
-        except requests.exceptions.Timeout as error:
-            logging.error(f"Request timeout during {operation}: {error}")
-        except requests.exceptions.ConnectionError as error:
-            logging.error(f"Connection error during {operation}: {error}")
-        except requests.exceptions.HTTPError as error:
-            logging.error(f"HTTP error {error.response.status_code} during {operation}: {error}")
-        except json.JSONDecodeError as error:
-            logging.error(f"Invalid JSON response during {operation}: {error}")
-        except requests.exceptions.RequestException as error:
-            logging.error(f"Request failed during {operation}: {error}")
+                response = requests.post(
+                    url=url,
+                    headers=headers,
+                    data=json.dumps(data),
+                    timeout=30
+                )
+                response.raise_for_status()
+                return response.json()
+
+            except requests.exceptions.Timeout as error:
+                logging.warning(f"Request timeout during {operation} (attempt {attempt + 1}/{max_retries + 1}): {error}")
+                if attempt == max_retries:
+                    logging.error(f"Max retries exceeded for timeout during {operation}")
+
+            except requests.exceptions.ConnectionError as error:
+                logging.warning(f"Connection error during {operation} (attempt {attempt + 1}/{max_retries + 1}): {error}")
+                if attempt == max_retries:
+                    logging.error(f"Max retries exceeded for connection error during {operation}")
+
+            except requests.exceptions.HTTPError as error:
+                # Don't retry on 4xx client errors (bad request, unauthorized, etc.)
+                # Only retry on 5xx server errors and 429 (too many requests)
+                status_code = error.response.status_code
+                if 400 <= status_code < 500 and status_code != 429:
+                    logging.error(f"HTTP client error {status_code} during {operation}: {error}")
+                    return None
+
+                logging.warning(f"HTTP error {status_code} during {operation} (attempt {attempt + 1}/{max_retries + 1}): {error}")
+                if attempt == max_retries:
+                    logging.error(f"Max retries exceeded for HTTP error {status_code} during {operation}")
+
+            except json.JSONDecodeError as error:
+                # JSON decode errors are unlikely to be fixed by retrying
+                logging.error(f"Invalid JSON response during {operation}: {error}")
+                return None
+
+            except requests.exceptions.RequestException as error:
+                logging.warning(f"Request failed during {operation} (attempt {attempt + 1}/{max_retries + 1}): {error}")
+                if attempt == max_retries:
+                    logging.error(f"Max retries exceeded for request failure during {operation}")
 
         return None
 
